@@ -1,4 +1,4 @@
-import io, json, os, time, datetime
+import io, json, os, time, datetime, email.utils
 from collections import Counter
 import requests
 from PIL import Image
@@ -22,6 +22,7 @@ COLORES = {
     2: (255, 0, 0, 230),      # rojo
     3: (150, 0, 220, 240),    # morado
 }
+COSTA = "radar/costa.png"
 
 
 def descargar():
@@ -35,7 +36,8 @@ def descargar():
             if j.get("estado") == 200:
                 g = requests.get(j["datos"], timeout=60)
                 if g.content[:3] == b"GIF":
-                    return g.content
+                    print("Cabeceras:", dict(g.headers))
+                    return g.content, g.headers.get("Last-Modified")
                 print("La descarga no era un GIF:", g.content[:60])
         except Exception as e:
             print("Error:", type(e).__name__)
@@ -43,7 +45,18 @@ def descargar():
     raise SystemExit("AEMET no devolvio el radar")
 
 
-def procesar(contenido, carpeta="radar"):
+def hora_imagen(last_modified):
+    # hora de la imagen segun la cabecera de descarga de AEMET (si la envia)
+    if not last_modified:
+        return None
+    try:
+        dt = email.utils.parsedate_to_datetime(last_modified)
+        return dt.astimezone(datetime.timezone.utc).isoformat(timespec="seconds")
+    except Exception:
+        return None
+
+
+def procesar(contenido, carpeta="radar", imagen=None):
     im = Image.open(io.BytesIO(contenido)).convert("RGB")
     mapa = im.crop((0, 0, MAPA, MAPA))
     w, h = mapa.size
@@ -105,6 +118,7 @@ def procesar(contenido, carpeta="radar"):
 
     meta = {
         "actualizado": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "imagen": imagen,
         "pixeles": {"debil": cuenta[0], "moderada": cuenta[1], "fuerte": cuenta[2], "severa": cuenta[3]},
     }
     with open(os.path.join(carpeta, "meta.json"), "w") as f:
@@ -114,7 +128,7 @@ def procesar(contenido, carpeta="radar"):
 
 if __name__ == "__main__":
     os.makedirs("radar", exist_ok=True)
-    datos = descargar()
+    datos, last_modified = descargar()
     with open("radar/raw.gif", "wb") as f:
         f.write(datos)
-    procesar(datos)
+    procesar(datos, imagen=hora_imagen(last_modified))
