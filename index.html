@@ -53,6 +53,8 @@ function recargar() {
     var txt = m.imagen
       ? 'Datos AEMET de las ' + hora(m.imagen)
       : 'Datos AEMET · descargados a las ' + hora(m.actualizado);
+    var edad = (Date.now() - new Date(m.imagen || m.actualizado).getTime()) / 60000;
+    if (edad > 40) txt += ' · ¡imagen de hace ' + Math.round(edad) + ' min!';
     document.getElementById('estado').textContent = 'Radar ClimaExtremoSpain · ' + txt;
   }).catch(function () {
     document.getElementById('estado').textContent = 'Radar no disponible';
