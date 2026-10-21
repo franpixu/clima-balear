@@ -1,12 +1,40 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clima Balear Extremo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clima Balear Extremo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+html,body{height:100%;margin:0;font-family:sans-serif}
+header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#0b1e33;color:#fff}
+header span{font-size:14px;opacity:.8}
+#mapa{height:calc(100% - 56px)}
+</style>
 </head>
-<body style="font-family:sans-serif;text-align:center;padding:2rem">
-  <h1>Clima Balear Extremo</h1>
-  <p>Muy pronto: radar y avisos de AEMET.</p>
+<body>
+<header><strong>Clima Balear Extremo</strong><span id="hora">Cargando radar…</span></header>
+<div id="mapa"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const mapa = L.map('mapa').setView([40, -3.5], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(mapa);
+mapa.attributionControl.addAttribution('<a href="https://www.rainviewer.com">Weather data by Rain Viewer</a>');
+let capa;
+async function cargarRadar() {
+  try {
+    const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const d = await r.json();
+    const f = d.radar.past[d.radar.past.length - 1];
+    if (capa) mapa.removeLayer(capa);
+    capa = L.tileLayer(d.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', {opacity: 0.7, maxNativeZoom: 7, maxZoom: 18}).addTo(mapa);
+    document.getElementById('hora').textContent = 'Radar: ' + new Date(f.time * 1000).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
+  } catch (e) {
+    document.getElementById('hora').textContent = 'No se pudo cargar el radar';
+  }
+}
+cargarRadar();
+setInterval(cargarRadar, 300000);
+</script>
 </body>
 </html>
