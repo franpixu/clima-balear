@@ -24,6 +24,23 @@ COLORES = {
 }
 COSTA = "radar/costa.png"
 
+# Fuente del pie de la imagen de AEMET: 7x8 puntos, un caracter cada 9 pixeles, en magenta.
+# 0,1,2,3,4,6,9 estan copiados de una imagen real; 5, 7 y 8 estan dibujados con el mismo estilo.
+MAGENTA = (200, 0, 90)
+GLIFOS = {
+    "0": [".#####..", "#.....#.", "#.....#.", "#..#..#.", "#..#..#.", "#.....#.", "#.....#.", ".#####.."],
+    "1": ["...#....", "..##....", "...#....", "...#....", "...#....", "...#....", "...#....", ".#####.."],
+    "2": [".#####..", "#.....#.", "......#.", ".....#..", "..###...", ".#......", "#.......", "#######."],
+    "3": ["#######.", ".....#..", "....#...", "...##...", ".....#..", "......#.", "#.....#.", ".#####.."],
+    "4": [".....#..", "....##..", "...#.#..", "..#..#..", ".#...#..", "#######.", ".....#..", ".....#.."],
+    "5": ["#######.", "#.......", "#.......", "######..", "......#.", "......#.", "#.....#.", ".#####.."],
+    "6": ["..####..", ".#......", "#.......", "#.####..", "##....#.", "#.....#.", "#.....#.", ".#####.."],
+    "7": ["#######.", "......#.", ".....#..", "....#...", "...#....", "..#.....", "..#.....", "..#....."],
+    "8": [".#####..", "#.....#.", "#.....#.", ".#####..", "#.....#.", "#.....#.", "#.....#.", ".#####.."],
+    "9": [".#####..", "#.....#.", "#.....#.", "#....##.", ".####.#.", "......#.", ".....#..", ".####..."],
+    " ": ["........"] * 8,
+}
+
 
 def descargar():
     key = os.environ["AEMET_API_KEY"]
@@ -36,8 +53,7 @@ def descargar():
             if j.get("estado") == 200:
                 g = requests.get(j["datos"], timeout=60)
                 if g.content[:3] == b"GIF":
-                    print("Cabeceras:", dict(g.headers))
-                    return g.content, g.headers.get("Last-Modified")
+                    return g.content, fecha_descarga(g.headers.get("Date"))
                 print("La descarga no era un GIF:", g.content[:60])
         except Exception as e:
             print("Error:", type(e).__name__)
@@ -45,13 +61,55 @@ def descargar():
     raise SystemExit("AEMET no devolvio el radar")
 
 
-def hora_imagen(last_modified):
-    # hora de la imagen segun la cabecera de descarga de AEMET (si la envia)
-    if not last_modified:
-        return None
+def fecha_descarga(cabecera):
     try:
-        dt = email.utils.parsedate_to_datetime(last_modified)
-        return dt.astimezone(datetime.timezone.utc).isoformat(timespec="seconds")
+        return email.utils.parsedate_to_datetime(cabecera).astimezone(datetime.timezone.utc)
+    except Exception:
+        return datetime.datetime.now(datetime.timezone.utc)
+
+
+def _reconocer(bits):
+    puntos = []
+    for ch, g in GLIFOS.items():
+        d = sum(a != b for fa, fb in zip(bits, g) for a, b in zip(fa, fb))
+        puntos.append((d, ch))
+    puntos.sort()
+    if puntos[0][0] <= 10 and puntos[1][0] - puntos[0][0] >= 3:
+        return puntos[0][1]
+    return None
+
+
+def _campo(px, x0, n):
+    texto = ""
+    for i in range(n):
+        xs = x0 + 9 * i
+        bits = ["".join("#" if px[xs + dx, y] == MAGENTA else "." for dx in range(8)) for y in range(519, 527)]
+        ch = _reconocer(bits)
+        if ch is None:
+            return None
+        texto += ch
+    return texto
+
+
+def hora_desde_imagen(im, descarga):
+    """Lee la fecha y hora (UTC) que AEMET escribe en el pie de la imagen.
+    Si algo no cuadra devuelve None y la web lo dice con honestidad."""
+    try:
+        px = im.load()
+        dia = _campo(px, 189, 2)
+        anyo_dia = _campo(px, 252, 5)
+        hms = _campo(px, 306, 6)
+        if None in (dia, anyo_dia, hms) or not anyo_dia.isdigit() or not hms.isdigit():
+            return None
+        fecha = datetime.date(2000 + int(anyo_dia[:2]), 1, 1) + datetime.timedelta(days=int(anyo_dia[2:]) - 1)
+        if not dia.strip().isdigit() or int(dia) != fecha.day:
+            return None
+        t = datetime.datetime(fecha.year, fecha.month, fecha.day, int(hms[:2]), int(hms[2:4]), int(hms[4:]),
+                              tzinfo=datetime.timezone.utc)
+        edad = descarga - t
+        if not (datetime.timedelta(minutes=-2) <= edad <= datetime.timedelta(hours=3)):
+            return None
+        return t.isoformat(timespec="seconds")
     except Exception:
         return None
 
@@ -128,7 +186,9 @@ def procesar(contenido, carpeta="radar", imagen=None):
 
 if __name__ == "__main__":
     os.makedirs("radar", exist_ok=True)
-    datos, last_modified = descargar()
+    datos, descarga = descargar()
     with open("radar/raw.gif", "wb") as f:
         f.write(datos)
-    procesar(datos, imagen=hora_imagen(last_modified))
+    imagen = hora_desde_imagen(Image.open(io.BytesIO(datos)).convert("RGB"), descarga)
+    print("Hora de la imagen (UTC):", imagen)
+    procesar(datos, imagen=imagen)
