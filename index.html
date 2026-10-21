@@ -33,25 +33,22 @@ function limites() {
 }
 
 var radar = L.imageOverlay('radar/radar.png', limites(), {opacity: 0.9});
-var costa = L.imageOverlay('radar/costa_vista.png', limites(), {opacity: 1});
 var rainviewer = L.layerGroup();
 
 radar.addTo(mapa);
 L.control.layers(null, {
-  'Radar AEMET (colores propios)': radar,
-  'Costa de AEMET': costa,
+  'Radar ClimaExtremoSpain': radar,
   'Radar Europa (Rain Viewer)': rainviewer
 }, {collapsed: false}).addTo(mapa);
 
 function recargar() {
   var t = Date.now();
   radar.setUrl('radar/radar.png?t=' + t);
-  costa.setUrl('radar/costa_vista.png?t=' + t);
   fetch('radar/meta.json?t=' + t).then(function (r) { return r.json(); }).then(function (m) {
     var h = new Date(m.actualizado).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
-    document.getElementById('estado').textContent = 'Radar AEMET · actualizado ' + h;
+    document.getElementById('estado').textContent = 'Radar ClimaExtremoSpain · datos AEMET · actualizado ' + h;
   }).catch(function () {
-    document.getElementById('estado').textContent = 'Radar AEMET no disponible';
+    document.getElementById('estado').textContent = 'Radar no disponible';
   });
 }
 
