@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clima Balear Extremo</title>
+<title>Clima Extremo España</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 html,body{height:100%;margin:0;font-family:sans-serif}
@@ -16,13 +16,13 @@ header span{font-size:13px;opacity:.85;text-align:right}
 </style>
 </head>
 <body>
-<header><strong>Clima Balear Extremo</strong><span id="estado">Cargando radar…</span></header>
+<header><strong>Clima Extremo España</strong><span id="estado">Cargando radar…</span></header>
 <div id="mapa"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Centro del radar de Baleares (ajustado con las costas) y alcance de 240 km
-var LAT0 = 39.37, LON0 = 2.80, RADIO_KM = 240;
-var dx = 0, dy = 0; // desplazamiento en km (se usa para ajustar la posicion)
+// Centro del radar de Baleares, ya ajustado con las costas, y alcance de 240 km
+var LAT0 = 39.352, LON0 = 2.7884, RADIO_KM = 240;
+var dx = 0, dy = 0; // desplazamiento en km (solo para volver a ajustar)
 
 var mapa = L.map('mapa').setView([39.6, 2.9], 8);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(mapa);
