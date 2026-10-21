@@ -8,33 +8,103 @@
 <style>
 html,body{height:100%;margin:0;font-family:sans-serif}
 header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#0b1e33;color:#fff}
-header span{font-size:14px;opacity:.8}
+header span{font-size:13px;opacity:.85;text-align:right}
 #mapa{height:calc(100% - 56px)}
+.caja{background:rgba(255,255,255,.92);padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.5;box-shadow:0 1px 5px rgba(0,0,0,.35)}
+.pto{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.flechas button{width:40px;height:40px;font-size:18px;margin:2px}
 </style>
 </head>
 <body>
-<header><strong>Clima Balear Extremo</strong><span id="hora">Cargando radar…</span></header>
+<header><strong>Clima Balear Extremo</strong><span id="estado">Cargando radar…</span></header>
 <div id="mapa"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const mapa = L.map('mapa').setView([40, -3.5], 6);
+// Centro del radar de Baleares (ajustado con las costas) y alcance de 240 km
+var LAT0 = 39.37, LON0 = 2.80, RADIO_KM = 240;
+var dx = 0, dy = 0; // desplazamiento en km (se usa para ajustar la posicion)
+
+var mapa = L.map('mapa').setView([39.6, 2.9], 8);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(mapa);
-mapa.attributionControl.addAttribution('<a href="https://www.rainviewer.com">Weather data by Rain Viewer</a>');
-let capa;
-async function cargarRadar() {
-  try {
-    const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-    const d = await r.json();
-    const f = d.radar.past[d.radar.past.length - 1];
-    if (capa) mapa.removeLayer(capa);
-    capa = L.tileLayer(d.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', {opacity: 0.7, maxNativeZoom: 7, maxZoom: 18}).addTo(mapa);
-    document.getElementById('hora').textContent = 'Radar: ' + new Date(f.time * 1000).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
-  } catch (e) {
-    document.getElementById('hora').textContent = 'No se pudo cargar el radar';
-  }
+mapa.attributionControl.addAttribution('Radar © AEMET · Rain Viewer');
+
+function limites() {
+  var lat = LAT0 + dy / 111.32;
+  var lon = LON0 + dx / (111.32 * Math.cos(LAT0 * Math.PI / 180));
+  var dLat = RADIO_KM / 111.32;
+  var dLon = RADIO_KM / (111.32 * Math.cos(LAT0 * Math.PI / 180));
+  return [[lat - dLat, lon - dLon], [lat + dLat, lon + dLon]];
 }
-cargarRadar();
-setInterval(cargarRadar, 300000);
+
+var radar = L.imageOverlay('radar/radar.png', limites(), {opacity: 0.9});
+var costa = L.imageOverlay('radar/costa_vista.png', limites(), {opacity: 1});
+var rainviewer = L.layerGroup();
+
+radar.addTo(mapa);
+L.control.layers(null, {
+  'Radar AEMET (colores propios)': radar,
+  'Costa de AEMET (para ajustar)': costa,
+  'Radar Europa (Rain Viewer)': rainviewer
+}, {collapsed: false}).addTo(mapa);
+
+function recargar() {
+  var t = Date.now();
+  radar.setUrl('radar/radar.png?t=' + t);
+  costa.setUrl('radar/costa_vista.png?t=' + t);
+  fetch('radar/meta.json?t=' + t).then(function (r) { return r.json(); }).then(function (m) {
+    var h = new Date(m.actualizado).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
+    document.getElementById('estado').textContent = 'Radar AEMET · actualizado ' + h;
+  }).catch(function () {
+    document.getElementById('estado').textContent = 'Radar AEMET no disponible';
+  });
+}
+
+function recolocar() {
+  radar.setBounds(limites());
+  costa.setBounds(limites());
+  document.getElementById('ajuste').textContent = 'Norte ' + dy + ' km · Este ' + dx + ' km';
+}
+
+// Rain Viewer (opcional, para comparar)
+fetch('https://api.rainviewer.com/public/weather-maps.json').then(function (r) { return r.json(); }).then(function (d) {
+  var f = d.radar.past[d.radar.past.length - 1];
+  L.tileLayer(d.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', {opacity: 0.6, maxNativeZoom: 7, maxZoom: 18}).addTo(rainviewer);
+}).catch(function () {});
+
+// Leyenda
+var leyenda = L.control({position: 'bottomleft'});
+leyenda.onAdd = function () {
+  var d = L.DomUtil.create('div', 'caja');
+  d.innerHTML = '<b>Lluvia</b><br>' +
+    '<span class="pto" style="background:#00c800"></span>Débil<br>' +
+    '<span class="pto" style="background:#ffe600"></span>Moderada<br>' +
+    '<span class="pto" style="background:#ff0000"></span>Fuerte<br>' +
+    '<span class="pto" style="background:#9600dc"></span>Severa';
+  return d;
+};
+leyenda.addTo(mapa);
+
+// Ajuste de posicion con flechas
+var panel = L.control({position: 'bottomright'});
+panel.onAdd = function () {
+  var d = L.DomUtil.create('div', 'caja flechas');
+  d.innerHTML = '<div style="text-align:center"><button data-d="0,1">▲</button><br>' +
+    '<button data-d="-1,0">◀</button><button data-d="0,-1">▼</button><button data-d="1,0">▶</button></div>' +
+    '<div id="ajuste" style="text-align:center">Norte 0 km · Este 0 km</div>';
+  L.DomEvent.disableClickPropagation(d);
+  d.addEventListener('click', function (e) {
+    var b = e.target.getAttribute('data-d');
+    if (!b) return;
+    var p = b.split(',');
+    dx += Number(p[0]); dy += Number(p[1]);
+    recolocar();
+  });
+  return d;
+};
+panel.addTo(mapa);
+
+recargar();
+setInterval(recargar, 300000);
 </script>
 </body>
 </html>
