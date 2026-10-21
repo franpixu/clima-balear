@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clima Extremo España</title>
+<title>Clima Balear Extremo</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 html,body{height:100%;margin:0;font-family:sans-serif}
@@ -12,28 +12,24 @@ header span{font-size:13px;opacity:.85;text-align:right}
 #mapa{height:calc(100% - 56px)}
 .caja{background:rgba(255,255,255,.92);padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.5;box-shadow:0 1px 5px rgba(0,0,0,.35)}
 .pto{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle}
-.flechas button{width:40px;height:40px;font-size:18px;margin:2px}
 </style>
 </head>
 <body>
-<header><strong>Clima Extremo España</strong><span id="estado">Cargando radar…</span></header>
+<header><strong>Clima Balear Extremo</strong><span id="estado">Cargando radar…</span></header>
 <div id="mapa"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // Centro del radar de Baleares, ya ajustado con las costas, y alcance de 240 km
 var LAT0 = 39.352, LON0 = 2.7884, RADIO_KM = 240;
-var dx = 0, dy = 0; // desplazamiento en km (solo para volver a ajustar)
 
 var mapa = L.map('mapa').setView([39.6, 2.9], 8);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap'}).addTo(mapa);
 mapa.attributionControl.addAttribution('Radar © AEMET · Rain Viewer');
 
 function limites() {
-  var lat = LAT0 + dy / 111.32;
-  var lon = LON0 + dx / (111.32 * Math.cos(LAT0 * Math.PI / 180));
   var dLat = RADIO_KM / 111.32;
   var dLon = RADIO_KM / (111.32 * Math.cos(LAT0 * Math.PI / 180));
-  return [[lat - dLat, lon - dLon], [lat + dLat, lon + dLon]];
+  return [[LAT0 - dLat, LON0 - dLon], [LAT0 + dLat, LON0 + dLon]];
 }
 
 var radar = L.imageOverlay('radar/radar.png', limites(), {opacity: 0.9});
@@ -43,7 +39,7 @@ var rainviewer = L.layerGroup();
 radar.addTo(mapa);
 L.control.layers(null, {
   'Radar AEMET (colores propios)': radar,
-  'Costa de AEMET (para ajustar)': costa,
+  'Costa de AEMET': costa,
   'Radar Europa (Rain Viewer)': rainviewer
 }, {collapsed: false}).addTo(mapa);
 
@@ -57,12 +53,6 @@ function recargar() {
   }).catch(function () {
     document.getElementById('estado').textContent = 'Radar AEMET no disponible';
   });
-}
-
-function recolocar() {
-  radar.setBounds(limites());
-  costa.setBounds(limites());
-  document.getElementById('ajuste').textContent = 'Norte ' + dy + ' km · Este ' + dx + ' km';
 }
 
 // Rain Viewer (opcional, para comparar)
@@ -83,25 +73,6 @@ leyenda.onAdd = function () {
   return d;
 };
 leyenda.addTo(mapa);
-
-// Ajuste de posicion con flechas
-var panel = L.control({position: 'bottomright'});
-panel.onAdd = function () {
-  var d = L.DomUtil.create('div', 'caja flechas');
-  d.innerHTML = '<div style="text-align:center"><button data-d="0,1">▲</button><br>' +
-    '<button data-d="-1,0">◀</button><button data-d="0,-1">▼</button><button data-d="1,0">▶</button></div>' +
-    '<div id="ajuste" style="text-align:center">Norte 0 km · Este 0 km</div>';
-  L.DomEvent.disableClickPropagation(d);
-  d.addEventListener('click', function (e) {
-    var b = e.target.getAttribute('data-d');
-    if (!b) return;
-    var p = b.split(',');
-    dx += Number(p[0]); dy += Number(p[1]);
-    recolocar();
-  });
-  return d;
-};
-panel.addTo(mapa);
 
 recargar();
 setInterval(recargar, 300000);
