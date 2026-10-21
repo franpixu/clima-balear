@@ -7,11 +7,12 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 html,body{height:100%;margin:0;font-family:sans-serif}
-header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#0b1e33;color:#fff}
-header span{font-size:13px;opacity:.85;text-align:right}
+header{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 12px;background:#0b1e33;color:#fff;box-sizing:border-box}
+header span{font-size:12px;opacity:.85;text-align:right}
 #mapa{height:calc(100% - 56px)}
-.caja{background:rgba(255,255,255,.92);padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.5;box-shadow:0 1px 5px rgba(0,0,0,.35)}
+.caja{background:rgba(255,255,255,.94);padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.5;box-shadow:0 1px 5px rgba(0,0,0,.35);max-width:210px}
 .pto{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.nota{margin-top:6px;padding-top:6px;border-top:1px solid #ccc;font-size:11px;line-height:1.35;color:#333}
 </style>
 </head>
 <body>
@@ -41,12 +42,18 @@ L.control.layers(null, {
   'Radar Europa (Rain Viewer)': rainviewer
 }, {collapsed: false}).addTo(mapa);
 
+function hora(s) {
+  return new Date(s).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
+}
+
 function recargar() {
   var t = Date.now();
   radar.setUrl('radar/radar.png?t=' + t);
   fetch('radar/meta.json?t=' + t).then(function (r) { return r.json(); }).then(function (m) {
-    var h = new Date(m.actualizado).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
-    document.getElementById('estado').textContent = 'Radar ClimaExtremoSpain · datos AEMET · actualizado ' + h;
+    var txt = m.imagen
+      ? 'Datos AEMET de las ' + hora(m.imagen)
+      : 'Datos AEMET · descargados a las ' + hora(m.actualizado);
+    document.getElementById('estado').textContent = 'Radar ClimaExtremoSpain · ' + txt;
   }).catch(function () {
     document.getElementById('estado').textContent = 'Radar no disponible';
   });
@@ -62,11 +69,12 @@ fetch('https://api.rainviewer.com/public/weather-maps.json').then(function (r) {
 var leyenda = L.control({position: 'bottomleft'});
 leyenda.onAdd = function () {
   var d = L.DomUtil.create('div', 'caja');
-  d.innerHTML = '<b>Lluvia</b><br>' +
-    '<span class="pto" style="background:#00c800"></span>Débil<br>' +
-    '<span class="pto" style="background:#ffe600"></span>Moderada<br>' +
-    '<span class="pto" style="background:#ff0000"></span>Fuerte<br>' +
-    '<span class="pto" style="background:#9600dc"></span>Severa';
+  d.innerHTML = '<b>Lluvia (reflectividad)</b><br>' +
+    '<span class="pto" style="background:#00c800"></span>Débil · 12-30 dBZ<br>' +
+    '<span class="pto" style="background:#ffe600"></span>Moderada · 30-42 dBZ<br>' +
+    '<span class="pto" style="background:#ff0000"></span>Fuerte · 42-54 dBZ<br>' +
+    '<span class="pto" style="background:#9600dc"></span>Severa · 54 dBZ o más' +
+    '<div class="nota">Fuente: AEMET. Servicio no oficial: no sustituye los avisos oficiales. En emergencia, 112.</div>';
   return d;
 };
 leyenda.addTo(mapa);
