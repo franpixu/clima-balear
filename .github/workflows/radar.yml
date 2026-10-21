@@ -1,8 +1,13 @@
 name: Radar
 on:
+  schedule:
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: radar
+  cancel-in-progress: false
 jobs:
   radar:
     runs-on: ubuntu-latest
@@ -20,4 +25,5 @@ jobs:
           git config user.email "radar-bot@users.noreply.github.com"
           git add radar
           git commit -m "Radar" || echo "sin cambios"
+          git pull --rebase
           git push
