@@ -8,19 +8,21 @@ URL = "https://opendata.aemet.es/opendata/api/red/radar/regional/" + RADAR
 MAPA = 480    # el mapa ocupa las 480 primeras filas; debajo va la leyenda
 
 # Colores de la escala de AEMET -> nivel
-# 0 debil (12-30 dBZ), 1 moderada (30-42), 2 fuerte (42-54), 3 severa (54 o mas)
+# 0 debil (12-30 dBZ), 1 moderada (30-42), 2 fuerte (42-54), 3 muy fuerte (54-66), 4 severa (66 o mas)
 PALETA = {
     (0, 0, 252): 0, (0, 148, 252): 0, (0, 252, 252): 0,
     (67, 131, 35): 1, (0, 192, 0): 1,
     (0, 255, 0): 2, (255, 255, 0): 2,
-    (255, 187, 0): 3, (255, 127, 0): 3, (255, 0, 0): 3, (200, 0, 90): 3,
+    (255, 187, 0): 3, (255, 127, 0): 3,
+    (255, 0, 0): 4, (200, 0, 90): 4,
 }
 # Tus colores (R, G, B, transparencia)
 COLORES = {
     0: (0, 200, 0, 200),      # verde
     1: (255, 230, 0, 220),    # amarillo
-    2: (255, 0, 0, 230),      # rojo
-    3: (150, 0, 220, 240),    # morado
+    2: (255, 140, 0, 230),    # naranja
+    3: (255, 0, 0, 230),      # rojo
+    4: (150, 0, 220, 240),    # morado
 }
 COSTA = "radar/costa.png"
 
@@ -177,7 +179,8 @@ def procesar(contenido, carpeta="radar", imagen=None):
     meta = {
         "actualizado": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         "imagen": imagen,
-        "pixeles": {"debil": cuenta[0], "moderada": cuenta[1], "fuerte": cuenta[2], "severa": cuenta[3]},
+        "pixeles": {"debil": cuenta[0], "moderada": cuenta[1], "fuerte": cuenta[2],
+                    "muy_fuerte": cuenta[3], "severa": cuenta[4]},
     }
     with open(os.path.join(carpeta, "meta.json"), "w") as f:
         json.dump(meta, f)
