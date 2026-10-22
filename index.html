@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clima Balear Extremo</title>
+<title>Clima Extremo España</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 html,body{height:100%;margin:0;font-family:sans-serif}
@@ -16,7 +16,7 @@ header span{font-size:12px;opacity:.85;text-align:right}
 </style>
 </head>
 <body>
-<header><strong>Clima Balear Extremo</strong><span id="estado">Cargando radar…</span></header>
+<header><strong>Clima Extremo España</strong><span id="estado">Cargando radar…</span></header>
 <div id="mapa"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -74,8 +74,9 @@ leyenda.onAdd = function () {
   d.innerHTML = '<b>Lluvia (reflectividad)</b><br>' +
     '<span class="pto" style="background:#00c800"></span>Débil · 12-30 dBZ<br>' +
     '<span class="pto" style="background:#ffe600"></span>Moderada · 30-42 dBZ<br>' +
-    '<span class="pto" style="background:#ff0000"></span>Fuerte · 42-54 dBZ<br>' +
-    '<span class="pto" style="background:#9600dc"></span>Severa · 54 dBZ o más' +
+    '<span class="pto" style="background:#ff8c00"></span>Fuerte · 42-54 dBZ<br>' +
+    '<span class="pto" style="background:#ff0000"></span>Muy fuerte · 54-66 dBZ<br>' +
+    '<span class="pto" style="background:#9600dc"></span>Severa · 66 dBZ o más' +
     '<div class="nota">Fuente: AEMET. Servicio no oficial: no sustituye los avisos oficiales. En emergencia, 112.</div>';
   return d;
 };
